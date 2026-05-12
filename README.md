@@ -63,6 +63,40 @@ Runtime behavior:
 - Without `HF_TOKEN`, the UI falls back to a demo collection for local operator-flow testing.
 - If `GROQ_API_KEY` is missing, the app can still run in demo mode, but it will not use the live Groq verdict path.
 
+## Ingestion Workflow
+
+Use the manual ingestion workflow to prepare and load CVE data into the live Qdrant collection.
+
+Dry-run the curated offline sample:
+
+```powershell
+python -m src.ingest_pipeline --source sample --dry-run
+```
+
+Ingest the curated offline sample into the live collection:
+
+```powershell
+python -m src.ingest_pipeline --source sample
+```
+
+Ingest a local full NVD feed:
+
+```powershell
+python -m src.ingest_pipeline --source file --local-path data/nvdcve-2.0-2025.json --limit 75
+```
+
+If network access is available, ingest a bounded live API sample:
+
+```powershell
+python -m src.ingest_pipeline --source api --api-severity CRITICAL --limit 75
+```
+
+Notes:
+
+- Live ingestion requires `HF_TOKEN` because embeddings must be created before records are written to Qdrant.
+- API ingestion also expects `NVD_API_KEY` in the root `.env`.
+- `--dry-run` lets you verify record loading and filtering without calling Hugging Face or writing to Qdrant.
+
 ## Testing
 
 For a local test run:

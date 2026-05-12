@@ -131,6 +131,26 @@ def test_normalize_embedding_payload_rejects_invalid_payload() -> None:
         raise AssertionError("Expected ValueError for an empty embedding payload")
 
 
+def test_huggingface_embedder_uses_inference_client(monkeypatch) -> None:
+    from src.app import HuggingFaceEmbedder
+
+    class FakeInferenceClient:
+        def __init__(self, provider: str, api_key: str) -> None:
+            assert provider == "hf-inference"
+            assert api_key == "hf-test-token"
+
+        def feature_extraction(self, text: str, *, model: str):
+            assert model == "sentence-transformers/all-MiniLM-L6-v2"
+            return [[1.0, 2.0, 3.0], [3.0, 4.0, 5.0]]
+
+    monkeypatch.setattr("huggingface_hub.InferenceClient", FakeInferenceClient)
+
+    embedder = HuggingFaceEmbedder("hf-test-token")
+    vectors = embedder(["failed password for root"])
+
+    assert vectors == [[2.0, 3.0, 4.0]]
+
+
 def test_submit_log_for_analysis_bootstraps_demo_collection() -> None:
     client = QdrantClient(location=":memory:")
     fake_groq = FakeGroqClient("Analyst Verdict: High Risk. Retrieved SSH context supports the finding.")

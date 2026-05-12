@@ -147,26 +147,24 @@ class HuggingFaceEmbedder:
     def __init__(self, api_token: str, model: str = DEFAULT_HF_EMBEDDING_MODEL) -> None:
         self.api_token = api_token
         self.model = model
-        self.url = f"https://api-inference.huggingface.co/pipeline/feature-extraction/{model}"
 
     def __call__(self, texts: Sequence[str]) -> list[list[float]]:
-        import requests
+        from huggingface_hub import InferenceClient
 
+        client = InferenceClient(provider="hf-inference", api_key=self.api_token)
         vectors: list[list[float]] = []
-        headers = {"Authorization": f"Bearer {self.api_token}"}
         for text in texts:
             try:
-                response = requests.post(
-                    self.url,
-                    headers=headers,
-                    json={"inputs": text, "options": {"wait_for_model": True}},
-                    timeout=60,
+                payload = client.feature_extraction(
+                    text,
+                    model=self.model,
                 )
-                response.raise_for_status()
-                vectors.append(normalize_embedding_payload(response.json()))
-            except requests.Timeout as error:
+                if hasattr(payload, "tolist"):
+                    payload = payload.tolist()
+                vectors.append(normalize_embedding_payload(payload))
+            except TimeoutError as error:
                 raise TimeoutError("Hugging Face embedding request timed out") from error
-            except requests.RequestException as error:
+            except Exception as error:
                 raise RuntimeError(f"Hugging Face embedding request failed: {error}") from error
         return vectors
 
