@@ -3,8 +3,8 @@
 ## Current Snapshot
 
 Project: Semantic SOC Analyst
-Status: Sprint 02 completed
-Sprint: Sprint 02 complete
+Status: Sprint 03 completed
+Sprint: Sprint 03 complete
 
 ## Technical Direction
 
@@ -54,13 +54,13 @@ This approach keeps the heavy model work off the local machine while preserving 
 
 ## Current Sprint
 
-Sprint 02 has been completed.
+Sprint 03 has been completed.
 
 Planned sprint focus:
 
-- Move to Sprint 03: Log parsing and analyst pipeline
-- Validate the CVE ingestion workflow in future feature work
-- Keep the current foundation and ingestion files stable
+- Move to Sprint 04: Streamlit dashboard and operator flow
+- Validate the analyst verdict flow in future feature work
+- Keep the current foundation, ingestion, and analyst files stable
 
 Planned sprint sequence:
 
