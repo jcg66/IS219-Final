@@ -1,5 +1,19 @@
-# API Keys
+# Secrets
 .env
+.env.*
+!.env.example
 
-# Input data
-data/
+# Local vector storage and raw data
+qdrant_storage/
+data/*
+!data/.gitkeep
+
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# Python cache and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/

@@ -3,8 +3,8 @@
 ## Current Snapshot
 
 Project: Semantic SOC Analyst
-Status: Planning phase
-Sprint: No sprint started yet
+Status: Sprint 01 completed
+Sprint: Sprint 01 complete
 
 ## Technical Direction
 
@@ -54,13 +54,13 @@ This approach keeps the heavy model work off the local machine while preserving 
 
 ## Current Sprint
 
-No sprint has been started yet.
+Sprint 01 has been completed.
 
 Planned sprint focus:
 
-- Lock the project skeleton
-- Implement ingestion and parsing
-- Establish the first test suite
+- Move to Sprint 02: CVE ingestion and Qdrant storage
+- Validate sample data and ingestion workflow
+- Keep the current foundation files stable
 
 Planned sprint sequence:
 
