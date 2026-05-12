@@ -241,6 +241,29 @@ def test_build_display_sections_for_empty_submission() -> None:
     assert sections["verdict"] is None
     assert sections["message"] == "Paste a log or upload a file before submitting."
 
+def test_build_display_sections_truncates_large_parsed_message() -> None:
+    long_message = "Failed password for root from 10.0.0.5 port 22 ssh2 " * 80
+    result = UIAnalysisResult(
+        raw_text=long_message,
+        report=AnalystReport(
+            parsed_log=ParsedLog(
+                raw_text=long_message,
+                timestamp="May 12 10:11:12",
+                ip_address="10.0.0.5",
+                service="sshd",
+                message=long_message,
+            ),
+            retrieved_cves=[],
+            verdict="Analyst Verdict: No known vulnerability was identified.",
+        ),
+    )
+
+    sections = build_display_sections(result)
+
+    message_line = next(line for line in sections["parsed_lines"] if line.startswith("Message: "))
+    assert len(message_line) < len("Message: ") + len(long_message)
+    assert "[truncated for display]" in message_line
+
 
 def test_render_dashboard_shows_runtime_status_and_verdict(monkeypatch) -> None:
     fake_st = FakeStreamlit(

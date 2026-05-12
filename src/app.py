@@ -36,6 +36,8 @@ logger = logging.getLogger(__name__)
 DEMO_COLLECTION_NAME = f"{DEFAULT_COLLECTION_NAME}_demo"
 DEFAULT_HF_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 ANALYSIS_STATUS_MESSAGE = "Analyzing log, retrieving CVE context, and generating a verdict..."
+MAX_DISPLAY_MESSAGE_CHARS = 240
+DISPLAY_TRUNCATION_SUFFIX = " ... [truncated for display]"
 
 
 @dataclass(frozen=True)
@@ -436,7 +438,7 @@ def build_display_sections(result: UIAnalysisResult) -> dict[str, object]:
         f"Timestamp: {report.parsed_log.timestamp or 'unknown'}",
         f"Service: {report.parsed_log.service or 'unknown'}",
         f"IP Address: {report.parsed_log.ip_address or 'unknown'}",
-        f"Message: {report.parsed_log.message}",
+        f"Message: {_truncate_display_text(report.parsed_log.message, MAX_DISPLAY_MESSAGE_CHARS)}",
     ]
 
     return {
@@ -446,6 +448,14 @@ def build_display_sections(result: UIAnalysisResult) -> dict[str, object]:
         "parsed_lines": parsed_lines,
         "verdict": report.verdict,
     }
+
+
+def _truncate_display_text(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+
+    truncated_length = max(0, limit - len(DISPLAY_TRUNCATION_SUFFIX))
+    return text[:truncated_length].rstrip() + DISPLAY_TRUNCATION_SUFFIX
 
 
 @contextmanager

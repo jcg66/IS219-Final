@@ -92,6 +92,40 @@ Notes:
 - The mounted `data/` directory keeps the local Qdrant store available across container runs.
 - If you do not pass API keys, the app stays usable in demo mode with deterministic fallback behavior.
 
+## DockerHub Publish
+
+Use the release helper to build, tag, push, and pull the image against DockerHub:
+
+```powershell
+pwsh .\scripts\Publish-DockerHub.ps1 -Repository yourdockerhubuser/semantic-soc-analyst -Tag v1.0.0
+```
+
+Tagging notes:
+
+- Use a DockerHub repository name in the form `yourusername/semantic-soc-analyst`
+- Prefer a release tag such as `v1.0.0` for published images
+- Omit `-Tag` to publish or test the default `latest` tag
+- Pass `-SkipSmokeTest` if you only want to build, tag, push, and pull the image
+
+The helper script performs the release flow in order:
+
+1. Build the local image from the repository root
+2. Tag the local image for DockerHub
+3. Push the tagged image to DockerHub
+4. Pull the image back to confirm it is available
+5. Start an optional smoke-test container on port 8501
+
+If you prefer to run the commands manually, the equivalent flow is:
+
+```powershell
+docker login
+docker build -t semantic-soc-analyst .
+docker tag semantic-soc-analyst yourdockerhubuser/semantic-soc-analyst:v1.0.0
+docker push yourdockerhubuser/semantic-soc-analyst:v1.0.0
+docker pull yourdockerhubuser/semantic-soc-analyst:v1.0.0
+docker run --rm -p 8501:8501 -v ${PWD}\data:/app/data --env-file .env yourdockerhubuser/semantic-soc-analyst:v1.0.0
+```
+
 ## Ingestion Workflow
 
 Use the manual ingestion workflow to prepare and load CVE data into the live Qdrant collection.
@@ -149,7 +183,7 @@ If you want to test the app manually after the suite passes:
 
 ## Current Status
 
-Sprint 07 is complete.
+Sprint 08 is complete.
 
 Completed so far:
 
@@ -160,12 +194,13 @@ Completed so far:
 - Sprint 05: verification hardening, safer failure handling, and documentation cleanup
 - Sprint 06: external sample data ingestion and preprocessing
 - Sprint 07: Docker image and local container run
+- Sprint 08: DockerHub publish workflow
 
 Current focus:
 
-- Prepare for future distribution and environment packaging work
-- Expand the live-data workflow beyond the curated offline subset
 - Keep the project presentation-ready while feature work continues
+- Explore optional CI/CD or multi-architecture release automation
+- Expand the live-data workflow beyond the curated offline subset
 
 See [docs/STATUS.md](docs/STATUS.md) for the roadmap and sprint tracker.
 

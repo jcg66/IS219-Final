@@ -3,8 +3,8 @@
 ## Current Snapshot
 
 Project: Semantic SOC Analyst
-Status: Sprint 07 completed
-Sprint: Sprint 07 complete
+Status: Sprint 08 completed
+Sprint: Sprint 08 complete
 
 ## Technical Direction
 
@@ -54,7 +54,7 @@ This approach keeps the heavy model work off the local machine while preserving 
 
 ## Current Sprint
 
-Sprint 07 has been completed.
+Sprint 08 has been completed.
 
 Completed sprint sequence:
 
@@ -65,24 +65,25 @@ Completed sprint sequence:
 - Sprint 05: Testing hardening and release polish
 - Sprint 06: External data ingestion and preprocessing
 - Sprint 07: Docker image and local container run
+- Sprint 08: DockerHub publish workflow
 
-Sprint 07 completion notes:
+Sprint 08 completion notes:
 
-- The repo now includes a reproducible Dockerfile for the Streamlit app
-- Runtime secrets are injected at container start instead of copied into the image
-- The image supports both demo mode and live API mode through the same entrypoint
-- The mounted `data/` path remains usable for local Qdrant storage across runs
-- The sprint closes the packaging gap before broader distribution or deployment work
+- The repo now includes a repeatable PowerShell helper for building, tagging, pushing, and pulling the Docker image
+- The README documents the DockerHub release workflow and tag convention
+- The published image can be pulled back and smoke-tested against the same runtime assumptions used locally
+- Runtime secrets are still injected at launch instead of being baked into the image
 
 Next sprint sequence:
 
-- Sprint 08: TBD
+- Sprint 09: TBD
 
 ## Open Decisions
 
 - Confirm whether the NVD source will be live API only or API plus a checked-in sample JSON
 - Decide the minimum fields to keep in the local CVE schema
 - Finalize the wording for the analyst prompt and the verdict output format
+- Decide whether future release automation should live in PowerShell, GitHub Actions, or both
 
 ## Success Criteria
 
