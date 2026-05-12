@@ -1,0 +1,84 @@
+{
+  "vulnerabilities": [
+    {
+      "cve": {
+        "id": "CVE-2025-1001",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Critical SSH authentication bypass in an enterprise remote access gateway."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "cvssData": {
+                "baseScore": 9.8
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2025-1002",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "OpenSSH brute force lockout weakness allows repeated failed password attempts."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "cvssData": {
+                "baseScore": 9.4
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2025-2001",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Remote Desktop Protocol service exposes an authentication race condition leading to privilege escalation."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "cvssData": {
+                "baseScore": 9.1
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "cve": {
+        "id": "CVE-2025-3001",
+        "descriptions": [
+          {
+            "lang": "en",
+            "value": "Caching issue in a web asset pipeline may disclose stale content under rare conditions."
+          }
+        ],
+        "metrics": {
+          "cvssMetricV31": [
+            {
+              "cvssData": {
+                "baseScore": 5.3
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

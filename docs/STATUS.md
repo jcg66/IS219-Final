@@ -3,8 +3,8 @@
 ## Current Snapshot
 
 Project: Semantic SOC Analyst
-Status: Sprint 05 completed
-Sprint: Sprint 05 complete
+Status: Sprint 06 completed
+Sprint: Sprint 06 complete
 
 ## Technical Direction
 
@@ -54,7 +54,7 @@ This approach keeps the heavy model work off the local machine while preserving 
 
 ## Current Sprint
 
-Sprint 05 has been completed.
+Sprint 06 has been completed.
 
 Completed sprint sequence:
 
@@ -63,18 +63,18 @@ Completed sprint sequence:
 - Sprint 03: Log parsing and analyst pipeline
 - Sprint 04: Streamlit dashboard and operator flow
 - Sprint 05: Testing hardening and release polish
+- Sprint 06: External data ingestion and preprocessing
 
-Sprint 05 completion notes:
+Sprint 06 completion notes:
 
-- The full pytest suite passes locally against the repo-scoped test configuration
-- Pipeline and ingestion tests now cover timeout handling, empty embedding data, and retrieval-miss safety
-- Benign-log grounding behavior remains locked to a no-hallucination safe verdict
-- README setup, run, architecture, and testing sections now reflect the implemented project structure
-- The repo is in presentation-ready shape for the next external-data sprint
+- The repo now includes curated offline CVE and sample-log assets for repeatable local testing
+- NVD loading supports both checked-in offline samples and a live API fetch path
+- CVE preparation now normalizes and deduplicates records before downstream ingestion
+- External sample logs are normalized consistently before parser and UI usage
+- The sprint closes the data-preparation gap before Docker packaging or broader distribution work
 
 Next sprint sequence:
 
-- Sprint 06: External data ingestion and preprocessing
 - Sprint 07: Docker image and local container run
 
 ## Open Decisions
@@ -91,3 +91,4 @@ Next sprint sequence:
 - Tests cover parsing, integration behavior, and benign-log handling
 - The Streamlit dashboard supports the manual operator workflow and passes the current QA suite
 - Timeout and empty-data paths fail safely and predictably
+- The workflow supports offline fallback with realistic external sample assets

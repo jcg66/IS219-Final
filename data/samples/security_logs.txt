@@ -1,0 +1,5 @@
+# Curated sample logs for parser and UI testing
+May 12 10:11:12 host sshd[1234]: Failed password for root from 10.0.0.5 port 22 ssh2
+May 12 10:11:18 host sshd[1234]: Failed password for invalid user admin from 10.0.0.5 port 22 ssh2
+2026-05-12T11:25:00Z rdp-gateway[77]: Remote Desktop authentication failure from 203.0.113.20
+May 12 12:00:00 host cron[1000]: session opened for user backup

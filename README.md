@@ -20,6 +20,7 @@ The app accepts a pasted security log or uploaded text file, extracts useful sig
 The project follows a hybrid-local design:
 
 - Ingestion pulls a sample of NVD CVE data and stores it in local vector storage
+- A curated offline NVD subset and sample log set are kept in the repo for repeatable local testing
 - Parsing handles raw SSH and Syslog-style log strings
 - Retrieval finds the top matching CVEs for a given log entry
 - Generation uses a strict SOC analyst prompt so the response stays grounded in retrieved context
@@ -58,6 +59,7 @@ API key notes:
 Runtime behavior:
 
 - In live mode, ingest the target CVE dataset before analysis so the primary Qdrant collection exists.
+- The repo now includes curated offline sample assets in `data/samples/` for predictable local preprocessing and test runs.
 - Without `HF_TOKEN`, the UI falls back to a demo collection for local operator-flow testing.
 - If `GROQ_API_KEY` is missing, the app can still run in demo mode, but it will not use the live Groq verdict path.
 
@@ -84,7 +86,7 @@ If you want to test the app manually after the suite passes:
 
 ## Current Status
 
-Sprint 05 is complete.
+Sprint 06 is complete.
 
 Completed so far:
 
@@ -93,11 +95,12 @@ Completed so far:
 - Sprint 03: log parsing, retrieval, and grounded analyst pipeline
 - Sprint 04: Streamlit dashboard, runtime wiring, and UI test coverage
 - Sprint 05: verification hardening, safer failure handling, and documentation cleanup
+- Sprint 06: external sample data ingestion and preprocessing
 
 Current focus:
 
-- Prepare the external-data ingestion sprint
-- Expand the live-data workflow beyond the local demo dataset
+- Prepare Docker packaging and container-run support in Sprint 07
+- Expand the live-data workflow beyond the curated offline subset
 - Keep the project presentation-ready while feature work continues
 
 See [docs/STATUS.md](docs/STATUS.md) for the roadmap and sprint tracker.
@@ -105,10 +108,12 @@ See [docs/STATUS.md](docs/STATUS.md) for the roadmap and sprint tracker.
 ## Repository Structure
 
 - `src/ingestion.py`: load and vectorize CVE data
+- `src/preprocessing.py`: clean external sample logs and normalize raw text
 - `src/analyst.py`: run the retrieval and analysis pipeline
 - `src/app.py`: Streamlit user interface
 - `tests/`: parser, integration, and grounding tests
-- `data/`: local vector storage and sample CVE data
+- `data/samples/`: curated offline CVE and log samples for Sprint 06
+- `data/`: local vector storage and additional local data files
 - `pytest.ini`: repo-level test discovery and local test-run configuration
 
 ## Technical Notes

@@ -26,7 +26,11 @@ def test_gitignore_blocks_secrets_and_raw_data() -> None:
     assert "!data/.gitkeep" in gitignore
 
 
-def test_settings_import_is_secret_free() -> None:
+def test_settings_import_is_secret_free(monkeypatch) -> None:
+    monkeypatch.delenv("GROQ_API_KEY", raising=False)
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("NVD_API_KEY", raising=False)
+
     module = importlib.import_module("src.settings")
 
     settings = module.load_settings()
@@ -50,6 +54,11 @@ def test_requirements_are_pinned() -> None:
 
 def test_data_scaffold_placeholder_exists() -> None:
     assert (PROJECT_ROOT / "data" / ".gitkeep").exists()
+
+
+def test_curated_external_sample_assets_exist() -> None:
+    assert (PROJECT_ROOT / "data" / "samples" / "nvd-sample-2025.json").exists()
+    assert (PROJECT_ROOT / "data" / "samples" / "security_logs.txt").exists()
 
 
 def test_readme_documents_setup_run_and_test_steps() -> None:

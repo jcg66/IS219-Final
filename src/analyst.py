@@ -12,6 +12,7 @@ import re
 from typing import Any, Callable, Sequence
 
 from src.ingestion import DEFAULT_COLLECTION_NAME
+from src.preprocessing import normalize_log_text
 from src.settings import AppSettings, load_dotenv_if_available, load_settings
 
 logger = logging.getLogger(__name__)
@@ -80,7 +81,7 @@ ISO_PATTERN = re.compile(
 def parse_log(raw_text: str) -> ParsedLog:
     """Parse common SSH and syslog-style log strings."""
 
-    text = raw_text.strip()
+    text = normalize_log_text(raw_text)
     timestamp = _extract_timestamp(text)
     ip_address = _extract_ip(text)
 

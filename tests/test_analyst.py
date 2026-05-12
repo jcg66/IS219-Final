@@ -60,6 +60,15 @@ def test_parse_iso_log_extracts_service_and_message() -> None:
     assert parsed.message.startswith("Accepted password")
 
 
+def test_parse_log_normalizes_external_whitespace_before_parsing() -> None:
+    parsed = parse_log("  May 12 10:11:12\thost sshd[1234]: Failed password for root \nfrom 10.0.0.5 port 22 ssh2  ")
+
+    assert parsed.timestamp == "May 12 10:11:12"
+    assert parsed.service == "sshd"
+    assert parsed.ip_address == "10.0.0.5"
+    assert parsed.message.startswith("Failed password")
+
+
 def test_analyze_log_returns_grounded_verdict_when_matches_exist() -> None:
     qdrant_client = FakeQdrantClient(
         [

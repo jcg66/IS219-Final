@@ -14,10 +14,14 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable, Iterable, Sequence
 
+from src.preprocessing import normalize_text
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_COLLECTION_NAME = "semantic_soc_cves"
-DEFAULT_LOCAL_JSON = Path("data/nvdcve-2.0-2025.json")
+DEFAULT_SAMPLE_JSON = Path("data/samples/nvd-sample-2025.json")
+DEFAULT_FULL_FEED_JSON = Path("data/nvdcve-2.0-2025.json")
+DEFAULT_NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
 
 @dataclass(frozen=True)
@@ -40,10 +44,11 @@ def load_nvd_records(
     offline for demo and testing purposes.
     """
 
-    resolved_path = Path(local_path) if local_path is not None else DEFAULT_LOCAL_JSON
-    if resolved_path.exists():
-        logger.info("Loading NVD sample from %s", resolved_path)
-        return _parse_nvd_payload(_read_json(resolved_path))
+    candidate_paths = [Path(local_path)] if local_path is not None else [DEFAULT_SAMPLE_JSON, DEFAULT_FULL_FEED_JSON]
+    for resolved_path in candidate_paths:
+        if resolved_path.exists():
+            logger.info("Loading NVD sample from %s", resolved_path)
+            return _parse_nvd_payload(_read_json(resolved_path))
 
     if source_url:
         logger.info("Fetching NVD sample from %s", source_url)
@@ -52,6 +57,47 @@ def load_nvd_records(
 
     logger.warning("No NVD source was available")
     return []
+
+
+def load_nvd_api_records(
+    api_key: str | None,
+    *,
+    base_url: str = DEFAULT_NVD_API_URL,
+    timeout_seconds: float = 20.0,
+    results_per_page: int = 200,
+    max_records: int = 500,
+    keyword_search: str | None = None,
+    severity: str | None = None,
+) -> list[CVERecord]:
+    """Load a bounded NVD sample directly from the live NVD API."""
+
+    headers = {"apiKey": api_key} if api_key else None
+    collected: list[CVERecord] = []
+    start_index = 0
+
+    while len(collected) < max_records:
+        batch_size = min(results_per_page, max_records - len(collected))
+        params: dict[str, object] = {
+            "resultsPerPage": batch_size,
+            "startIndex": start_index,
+        }
+        if keyword_search:
+            params["keywordSearch"] = keyword_search
+        if severity:
+            params["cvssV3Severity"] = severity
+
+        payload = _fetch_json(base_url, timeout_seconds, headers=headers, params=params)
+        batch = _parse_nvd_payload(payload)
+        if not batch:
+            break
+
+        collected.extend(batch)
+        total_results = int(payload.get("totalResults", len(collected))) if isinstance(payload, dict) else len(collected)
+        start_index += len(batch)
+        if start_index >= total_results:
+            break
+
+    return collected[:max_records]
 
 
 def filter_records(
@@ -74,6 +120,40 @@ def filter_records(
             break
 
     return selected
+
+
+def prepare_cve_records(
+    records: Iterable[CVERecord],
+    *,
+    min_cvss: float = 9.0,
+    keywords: Sequence[str] = ("ssh", "rdp"),
+    limit: int = 500,
+) -> list[CVERecord]:
+    """Filter, normalize, and deduplicate CVE records for ingestion."""
+
+    filtered = sorted(
+        filter_records(records, min_cvss=min_cvss, keywords=keywords, limit=limit),
+        key=lambda record: (-record.cvss_score, record.cve_id),
+    )
+    prepared: list[CVERecord] = []
+    seen_ids: set[str] = set()
+
+    for record in filtered:
+        if record.cve_id in seen_ids:
+            continue
+        seen_ids.add(record.cve_id)
+        normalized_description = normalize_text(record.description)
+        if not normalized_description:
+            continue
+        prepared.append(
+            CVERecord(
+                cve_id=record.cve_id,
+                description=normalized_description,
+                cvss_score=record.cvss_score,
+            )
+        )
+
+    return prepared[:limit]
 
 
 def ingest_records(
@@ -160,14 +240,20 @@ def _read_json(path: Path) -> Any:
         return json.load(file_handle)
 
 
-def _fetch_json(url: str, timeout_seconds: float) -> Any:
+def _fetch_json(
+    url: str,
+    timeout_seconds: float,
+    *,
+    headers: dict[str, str] | None = None,
+    params: dict[str, object] | None = None,
+) -> Any:
     try:
         import requests
     except ImportError as error:  # pragma: no cover - only relevant in minimal installs
         raise RuntimeError("requests is required to fetch remote NVD data") from error
 
     try:
-        response = requests.get(url, timeout=timeout_seconds)
+        response = requests.get(url, headers=headers, params=params, timeout=timeout_seconds)
         response.raise_for_status()
         return response.json()
     except requests.Timeout as error:
@@ -203,7 +289,7 @@ def _normalize_record(item: Any) -> CVERecord | None:
         return None
 
     cve_id = cve.get("id")
-    description = _extract_description(cve)
+    description = normalize_text(_extract_description(cve))
     cvss_score = _extract_cvss_score(cve)
 
     if not cve_id or not description:

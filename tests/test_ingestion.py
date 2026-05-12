@@ -6,7 +6,17 @@ from pathlib import Path
 
 from qdrant_client import QdrantClient
 
-from src.ingestion import CVERecord, _fetch_json, count_points, filter_records, ingest_records, load_nvd_records
+from src.ingestion import (
+    CVERecord,
+    DEFAULT_SAMPLE_JSON,
+    _fetch_json,
+    count_points,
+    filter_records,
+    ingest_records,
+    load_nvd_api_records,
+    load_nvd_records,
+    prepare_cve_records,
+)
 
 
 def test_load_nvd_records_from_local_json(monkeypatch) -> None:
@@ -43,6 +53,14 @@ def test_load_nvd_records_from_local_json(monkeypatch) -> None:
     assert "SSH authentication bypass" in records[0].description
 
 
+def test_load_nvd_records_uses_curated_sample_by_default() -> None:
+    records = load_nvd_records()
+
+    assert DEFAULT_SAMPLE_JSON.exists()
+    assert records
+    assert any(record.cve_id == "CVE-2025-1001" for record in records)
+
+
 def test_filter_records_prefers_high_signal_items() -> None:
     records = [
         CVERecord(cve_id="CVE-1", description="Critical SSH issue", cvss_score=9.8),
@@ -53,6 +71,23 @@ def test_filter_records_prefers_high_signal_items() -> None:
 
     assert len(selected) == 1
     assert selected[0].cve_id == "CVE-1"
+
+
+def test_prepare_cve_records_filters_normalizes_and_deduplicates() -> None:
+    prepared = prepare_cve_records(
+        [
+            CVERecord(cve_id="CVE-1", description=" Critical   SSH issue ", cvss_score=9.8),
+            CVERecord(cve_id="CVE-1", description="Critical SSH issue", cvss_score=9.8),
+            CVERecord(cve_id="CVE-2", description="Low severity desktop issue", cvss_score=4.0),
+            CVERecord(cve_id="CVE-3", description="RDP escalation path", cvss_score=8.0),
+        ],
+        min_cvss=9.0,
+        keywords=("ssh", "rdp"),
+        limit=10,
+    )
+
+    assert [record.cve_id for record in prepared] == ["CVE-1", "CVE-3"]
+    assert prepared[0].description == "Critical SSH issue"
 
 
 def test_ingest_records_is_idempotent() -> None:
@@ -106,7 +141,7 @@ def test_fetch_json_timeout_raises_clear_error(monkeypatch) -> None:
             pass
 
         @staticmethod
-        def get(url: str, timeout: float):
+        def get(url: str, headers=None, params=None, timeout: float = 0.0):
             raise FakeRequests.Timeout("timeout")
 
     monkeypatch.setitem(__import__("sys").modules, "requests", FakeRequests)
@@ -117,3 +152,32 @@ def test_fetch_json_timeout_raises_clear_error(monkeypatch) -> None:
         assert "timed out" in str(error)
     else:  # pragma: no cover - defensive assertion
         raise AssertionError("Expected TimeoutError for NVD timeout handling")
+
+
+def test_load_nvd_api_records_uses_mocked_fetch(monkeypatch) -> None:
+    payload = {
+        "totalResults": 2,
+        "vulnerabilities": [
+            {
+                "cve": {
+                    "id": "CVE-2025-1111",
+                    "descriptions": [{"lang": "en", "value": "Critical SSH issue from API."}],
+                    "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 9.7}}]},
+                }
+            },
+            {
+                "cve": {
+                    "id": "CVE-2025-2222",
+                    "descriptions": [{"lang": "en", "value": "RDP authentication weakness from API."}],
+                    "metrics": {"cvssMetricV31": [{"cvssData": {"baseScore": 9.1}}]},
+                }
+            },
+        ],
+    }
+
+    monkeypatch.setattr("src.ingestion._fetch_json", lambda *args, **kwargs: payload)
+
+    records = load_nvd_api_records("test-key", max_records=2, keyword_search="ssh")
+
+    assert len(records) == 2
+    assert records[0].cve_id == "CVE-2025-1111"
