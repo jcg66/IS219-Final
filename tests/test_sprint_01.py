@@ -50,3 +50,13 @@ def test_requirements_are_pinned() -> None:
 
 def test_data_scaffold_placeholder_exists() -> None:
     assert (PROJECT_ROOT / "data" / ".gitkeep").exists()
+
+
+def test_readme_documents_setup_run_and_test_steps() -> None:
+    readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+
+    assert ".env.example" in readme
+    assert "pip install -r requirements.txt" in readme
+    assert "streamlit run src/app.py" in readme
+    assert "python -m pytest -q" in readme
+    assert "Hugging Face Inference API" in readme

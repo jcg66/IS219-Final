@@ -20,6 +20,15 @@ SYSTEM_PROMPT = (
     "You are a Senior SOC Analyst. Use only the provided context to analyze the log. "
     "If no match is found, state that no known vulnerability was identified."
 )
+SAFE_NO_MATCH_VERDICT = "Analyst Verdict: No known vulnerability was identified."
+SAFE_TIMEOUT_VERDICT = (
+    "Analyst Verdict: Analysis could not be completed because the model request timed out. "
+    "Review the retrieved CVE context manually."
+)
+SAFE_UPSTREAM_ERROR_VERDICT = (
+    "Analyst Verdict: Analysis could not be completed because the model service was unavailable. "
+    "Review the retrieved CVE context manually."
+)
 
 
 @dataclass(frozen=True)
@@ -112,14 +121,18 @@ def retrieve_similar_cves(
     """Retrieve the top matching CVEs for a log entry."""
 
     logger.info("Querying Qdrant...")
-    query_vector = list(embedder([log_text])[0])
+    embedded_logs = list(embedder([log_text]))
+    if not embedded_logs or not embedded_logs[0]:
+        raise RuntimeError("Embedding client returned no vector for the submitted log.")
+
+    query_vector = list(embedded_logs[0])
     search_results = client.search(
         collection_name=collection_name,
         query_vector=query_vector,
         limit=top_k,
         with_payload=True,
         with_vectors=False,
-    )
+    ) or []
 
     retrieved: list[RetrievedCVE] = []
     for item in search_results:
@@ -178,7 +191,7 @@ def generate_verdict(
 
     if not retrieved_cves:
         logger.info("No matching CVEs found; returning safe verdict")
-        return "Analyst Verdict: No known vulnerability was identified."
+        return SAFE_NO_MATCH_VERDICT
 
     prompt = build_prompt(parsed_log, retrieved_cves)
     logger.info("Generating Verdict...")
@@ -187,7 +200,15 @@ def generate_verdict(
         settings = settings or load_settings()
         groq_client = GroqChatClient(api_key=settings.groq_api_key)
 
-    verdict = groq_client.generate(SYSTEM_PROMPT, prompt)
+    try:
+        verdict = groq_client.generate(SYSTEM_PROMPT, prompt)
+    except TimeoutError:
+        logger.warning("Groq verdict generation timed out")
+        return SAFE_TIMEOUT_VERDICT
+    except RuntimeError as error:
+        logger.warning("Groq verdict generation failed: %s", error)
+        return SAFE_UPSTREAM_ERROR_VERDICT
+
     return verdict.strip()
 
 
@@ -222,29 +243,36 @@ class GroqChatClient:
 
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         if not self.api_key:
-            return "Analyst Verdict: No known vulnerability was identified."
+            return SAFE_NO_MATCH_VERDICT
 
         import requests
 
-        response = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": self.model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "temperature": 0,
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
-        data = response.json()
-        return str(data["choices"][0]["message"]["content"])
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    "temperature": 0,
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return str(data["choices"][0]["message"]["content"])
+        except requests.Timeout as error:
+            raise TimeoutError("Groq request timed out") from error
+        except requests.RequestException as error:
+            raise RuntimeError(f"Groq request failed: {error}") from error
+        except (KeyError, IndexError, TypeError, ValueError) as error:
+            raise RuntimeError("Groq response was malformed") from error
 
 
 def _extract_timestamp(text: str) -> str | None:

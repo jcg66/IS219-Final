@@ -115,6 +115,15 @@ def test_normalize_embedding_payload_averages_token_vectors() -> None:
     assert normalize_embedding_payload(payload) == [2.0, 4.0, 6.0]
 
 
+def test_normalize_embedding_payload_rejects_invalid_payload() -> None:
+    try:
+        normalize_embedding_payload([])
+    except ValueError as error:
+        assert "empty or invalid" in str(error)
+    else:  # pragma: no cover - defensive assertion
+        raise AssertionError("Expected ValueError for an empty embedding payload")
+
+
 def test_submit_log_for_analysis_bootstraps_demo_collection() -> None:
     client = QdrantClient(location=":memory:")
     fake_groq = FakeGroqClient("Analyst Verdict: High Risk. Retrieved SSH context supports the finding.")

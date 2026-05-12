@@ -95,12 +95,18 @@ def ingest_records(
 
     from qdrant_client.http import models
 
-    _ensure_collection(client, collection_name, len(embedder([records[0].description])[0]))
+    sample_vectors = list(embedder([records[0].description]))
+    if not sample_vectors or not sample_vectors[0]:
+        raise RuntimeError("Embedder returned no vector for CVE ingestion.")
+
+    _ensure_collection(client, collection_name, len(sample_vectors[0]))
 
     descriptions = [record.description for record in records]
     vectors = list(embedder(descriptions))
     if len(vectors) != len(records):
         raise ValueError("Embedder returned a mismatched number of vectors")
+    if any(not vector for vector in vectors):
+        raise RuntimeError("Embedder returned an empty vector during CVE ingestion.")
 
     points = []
     for record, vector in zip(records, vectors, strict=True):
@@ -160,9 +166,14 @@ def _fetch_json(url: str, timeout_seconds: float) -> Any:
     except ImportError as error:  # pragma: no cover - only relevant in minimal installs
         raise RuntimeError("requests is required to fetch remote NVD data") from error
 
-    response = requests.get(url, timeout=timeout_seconds)
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = requests.get(url, timeout=timeout_seconds)
+        response.raise_for_status()
+        return response.json()
+    except requests.Timeout as error:
+        raise TimeoutError("NVD request timed out") from error
+    except requests.RequestException as error:
+        raise RuntimeError(f"NVD request failed: {error}") from error
 
 
 def _parse_nvd_payload(payload: Any) -> list[CVERecord]:

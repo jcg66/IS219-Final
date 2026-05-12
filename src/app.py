@@ -149,14 +149,19 @@ class HuggingFaceEmbedder:
         vectors: list[list[float]] = []
         headers = {"Authorization": f"Bearer {self.api_token}"}
         for text in texts:
-            response = requests.post(
-                self.url,
-                headers=headers,
-                json={"inputs": text, "options": {"wait_for_model": True}},
-                timeout=60,
-            )
-            response.raise_for_status()
-            vectors.append(normalize_embedding_payload(response.json()))
+            try:
+                response = requests.post(
+                    self.url,
+                    headers=headers,
+                    json={"inputs": text, "options": {"wait_for_model": True}},
+                    timeout=60,
+                )
+                response.raise_for_status()
+                vectors.append(normalize_embedding_payload(response.json()))
+            except requests.Timeout as error:
+                raise TimeoutError("Hugging Face embedding request timed out") from error
+            except requests.RequestException as error:
+                raise RuntimeError(f"Hugging Face embedding request failed: {error}") from error
         return vectors
 
 

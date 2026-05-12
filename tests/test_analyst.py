@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.analyst import analyze_log, parse_log
+from src.analyst import SAFE_NO_MATCH_VERDICT, SAFE_TIMEOUT_VERDICT, analyze_log, generate_verdict, parse_log
 
 
 @dataclass(frozen=True)
@@ -31,6 +31,11 @@ class FakeGroqClient:
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         self.calls.append((system_prompt, user_prompt))
         return self.response
+
+
+class TimeoutGroqClient:
+    def generate(self, system_prompt: str, user_prompt: str) -> str:
+        raise TimeoutError("timed out")
 
 
 def _fake_embedder(texts: list[str]) -> list[list[float]]:
@@ -96,5 +101,56 @@ def test_benign_log_returns_safe_verdict_without_groq_call() -> None:
     )
 
     assert report.retrieved_cves == []
-    assert report.verdict == "Analyst Verdict: No known vulnerability was identified."
+    assert report.verdict == SAFE_NO_MATCH_VERDICT
     assert groq_client.calls == []
+
+
+def test_generate_verdict_returns_safe_no_match_without_calling_groq() -> None:
+    parsed = parse_log("May 12 12:00:00 host cron[1000]: session opened for user backup")
+
+    verdict = generate_verdict(parsed, [], groq_client=TimeoutGroqClient())
+
+    assert verdict == SAFE_NO_MATCH_VERDICT
+
+
+def test_analyze_log_uses_safe_timeout_verdict_when_groq_times_out() -> None:
+    qdrant_client = FakeQdrantClient(
+        [
+            FakeScoredPoint(
+                payload={
+                    "cve_id": "CVE-2025-0100",
+                    "description": "SSH brute force authentication weakness.",
+                    "cvss_score": 9.8,
+                },
+                score=0.91,
+            )
+        ]
+    )
+
+    report = analyze_log(
+        "May 12 10:11:12 host sshd[1234]: Failed password for root from 10.0.0.5 port 22 ssh2",
+        qdrant_client,
+        _fake_embedder,
+        TimeoutGroqClient(),
+    )
+
+    assert report.verdict == SAFE_TIMEOUT_VERDICT
+
+
+def test_analyze_log_raises_clear_error_when_embedder_returns_no_vector() -> None:
+    qdrant_client = FakeQdrantClient([])
+
+    def empty_embedder(texts: list[str]) -> list[list[float]]:
+        return []
+
+    try:
+        analyze_log(
+            "May 12 10:11:12 host sshd[1234]: Failed password for root from 10.0.0.5 port 22 ssh2",
+            qdrant_client,
+            empty_embedder,
+            FakeGroqClient("unused"),
+        )
+    except RuntimeError as error:
+        assert "returned no vector" in str(error)
+    else:  # pragma: no cover - defensive assertion
+        raise AssertionError("Expected a RuntimeError when the embedder returns no vectors")

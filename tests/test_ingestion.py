@@ -6,7 +6,7 @@ from pathlib import Path
 
 from qdrant_client import QdrantClient
 
-from src.ingestion import CVERecord, count_points, filter_records, ingest_records, load_nvd_records
+from src.ingestion import CVERecord, _fetch_json, count_points, filter_records, ingest_records, load_nvd_records
 
 
 def test_load_nvd_records_from_local_json(monkeypatch) -> None:
@@ -74,3 +74,46 @@ def test_ingest_records_is_idempotent() -> None:
     assert first_ingest == 2
     assert second_ingest == 2
     assert total_points == 2
+
+
+def test_ingest_records_rejects_empty_embedding_output() -> None:
+    client = QdrantClient(location=":memory:")
+
+    def empty_embedder(texts: list[str]) -> list[list[float]]:
+        return []
+
+    try:
+        ingest_records(
+            [CVERecord(cve_id="CVE-2025-0100", description="SSH brute force vector", cvss_score=9.5)],
+            client,
+            empty_embedder,
+        )
+    except RuntimeError as error:
+        assert "returned no vector" in str(error)
+    else:  # pragma: no cover - defensive assertion
+        raise AssertionError("Expected a RuntimeError for empty embedding output")
+    finally:
+        if hasattr(client, "close"):
+            client.close()
+
+
+def test_fetch_json_timeout_raises_clear_error(monkeypatch) -> None:
+    class FakeRequests:
+        class Timeout(Exception):
+            pass
+
+        class RequestException(Exception):
+            pass
+
+        @staticmethod
+        def get(url: str, timeout: float):
+            raise FakeRequests.Timeout("timeout")
+
+    monkeypatch.setitem(__import__("sys").modules, "requests", FakeRequests)
+
+    try:
+        _fetch_json("https://example.com/nvd.json", 2.0)
+    except TimeoutError as error:
+        assert "timed out" in str(error)
+    else:  # pragma: no cover - defensive assertion
+        raise AssertionError("Expected TimeoutError for NVD timeout handling")
