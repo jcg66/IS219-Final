@@ -5,6 +5,8 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+import sys
+
 from qdrant_client import QdrantClient
 
 from src.analyst import AnalystReport, ParsedLog, RetrievedCVE
@@ -12,6 +14,7 @@ from src.app import (
     ANALYSIS_STATUS_MESSAGE,
     DEMO_COLLECTION_NAME,
     DashboardRuntime,
+    PROJECT_ROOT,
     UIAnalysisResult,
     build_demo_embedder,
     build_display_sections,
@@ -101,6 +104,10 @@ def test_resolve_log_input_prefers_pasted_text() -> None:
     result = resolve_log_input("  pasted log  ", FakeUploadedFile(b"ignored"))
 
     assert result == "pasted log"
+
+
+def test_app_bootstraps_project_root_for_streamlit_script_execution() -> None:
+    assert str(PROJECT_ROOT) in sys.path
 
 
 def test_resolve_log_input_reads_uploaded_file_when_no_paste() -> None:
