@@ -62,6 +62,15 @@ Planned sprint focus:
 - Implement ingestion and parsing
 - Establish the first test suite
 
+Planned sprint sequence:
+
+- Sprint 01: Foundation and environment setup
+- Sprint 02: CVE ingestion and Qdrant storage
+- Sprint 03: Log parsing and analyst pipeline
+- Sprint 04: Streamlit dashboard and operator flow
+- Sprint 05: Testing hardening and release polish
+- Sprint 06: External data ingestion and preprocessing
+
 ## Open Decisions
 
 - Confirm whether the NVD source will be live API only or API plus a checked-in sample JSON
