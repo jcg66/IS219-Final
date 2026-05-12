@@ -32,21 +32,55 @@ This approach keeps the application practical for a student laptop while still d
 1. Create and activate a virtual environment.
 2. Install dependencies with `pip install -r requirements.txt`.
 3. Copy `.env.example` to `.env` in the project root.
-4. Add local secrets only to the root `.env` file:
-   `GROQ_API_KEY=...`
-   `HF_TOKEN=...`
-   `NVD_API_KEY=...`
+4. Add local secrets only to the root `.env` file.
+
+Example `.env`:
+
+```env
+GROQ_API_KEY=your_groq_api_key_here
+HF_TOKEN=your_huggingface_token_here
+NVD_API_KEY=your_nvd_api_key_here
+```
+
+API key notes:
+
+- `GROQ_API_KEY` is used for the final analyst verdict generation.
+- `HF_TOKEN` enables live Hugging Face embeddings. Without it, the dashboard falls back to demo mode.
+- `NVD_API_KEY` is reserved for NVD-backed ingestion work and should still be kept in `.env` for local development.
+- Do not commit `.env`; keep real secrets only in your local root `.env` file.
 
 ## Run
 
-- Launch the dashboard with `streamlit run src/app.py`.
+1. Activate the project virtual environment.
+2. Confirm `.env` is present at the project root.
+3. Launch the dashboard with `streamlit run src/app.py`.
+
+Runtime behavior:
+
 - In live mode, ingest the target CVE dataset before analysis so the primary Qdrant collection exists.
 - Without `HF_TOKEN`, the UI falls back to a demo collection for local operator-flow testing.
+- If `GROQ_API_KEY` is missing, the app can still run in demo mode, but it will not use the live Groq verdict path.
 
 ## Testing
 
-- Run the full verification suite with `python -m pytest -q`.
-- Automated tests mock Groq responses and cover benign-log grounding, no-match behavior, and UI error handling.
+For a local test run:
+
+1. Activate the project virtual environment.
+2. Run `python -m pytest -q` from the repository root.
+
+What the suite covers:
+
+- Parser extraction behavior
+- Ingestion normalization and vector-storage safeguards
+- Analyst grounding behavior for benign and matched logs
+- UI helper and dashboard rendering behavior
+- Timeout and empty-data failure paths
+
+If you want to test the app manually after the suite passes:
+
+1. Start the UI with `streamlit run src/app.py`.
+2. Paste a sample SSH or syslog-style log entry.
+3. Verify that the parsed fields, retrieved evidence, and verdict render without crashing.
 
 ## Current Status
 

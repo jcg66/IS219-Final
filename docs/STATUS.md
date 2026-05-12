@@ -75,6 +75,7 @@ Sprint 05 completion notes:
 Next sprint sequence:
 
 - Sprint 06: External data ingestion and preprocessing
+- Sprint 07: Docker image and local container run
 
 ## Open Decisions
 
