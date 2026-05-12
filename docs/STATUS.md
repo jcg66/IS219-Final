@@ -3,8 +3,8 @@
 ## Current Snapshot
 
 Project: Semantic SOC Analyst
-Status: Sprint 06 completed
-Sprint: Sprint 06 complete
+Status: Sprint 07 completed
+Sprint: Sprint 07 complete
 
 ## Technical Direction
 
@@ -54,7 +54,7 @@ This approach keeps the heavy model work off the local machine while preserving 
 
 ## Current Sprint
 
-Sprint 06 has been completed.
+Sprint 07 has been completed.
 
 Completed sprint sequence:
 
@@ -64,18 +64,19 @@ Completed sprint sequence:
 - Sprint 04: Streamlit dashboard and operator flow
 - Sprint 05: Testing hardening and release polish
 - Sprint 06: External data ingestion and preprocessing
+- Sprint 07: Docker image and local container run
 
-Sprint 06 completion notes:
+Sprint 07 completion notes:
 
-- The repo now includes curated offline CVE and sample-log assets for repeatable local testing
-- NVD loading supports both checked-in offline samples and a live API fetch path
-- CVE preparation now normalizes and deduplicates records before downstream ingestion
-- External sample logs are normalized consistently before parser and UI usage
-- The sprint closes the data-preparation gap before Docker packaging or broader distribution work
+- The repo now includes a reproducible Dockerfile for the Streamlit app
+- Runtime secrets are injected at container start instead of copied into the image
+- The image supports both demo mode and live API mode through the same entrypoint
+- The mounted `data/` path remains usable for local Qdrant storage across runs
+- The sprint closes the packaging gap before broader distribution or deployment work
 
 Next sprint sequence:
 
-- Sprint 07: Docker image and local container run
+- Sprint 08: TBD
 
 ## Open Decisions
 

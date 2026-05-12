@@ -63,6 +63,32 @@ Runtime behavior:
 - Without `HF_TOKEN`, the UI falls back to a demo collection for local operator-flow testing.
 - If `GROQ_API_KEY` is missing, the app can still run in demo mode, but it will not use the live Groq verdict path.
 
+## Docker
+
+Build the image:
+
+```powershell
+docker build -t semantic-soc-analyst .
+```
+
+Run the container in demo mode:
+
+```powershell
+docker run --rm -p 8501:8501 -v ${PWD}\data:/app/data semantic-soc-analyst
+```
+
+Run the container with live keys:
+
+```powershell
+docker run --rm -p 8501:8501 -v ${PWD}\data:/app/data --env-file .env semantic-soc-analyst
+```
+
+Notes:
+
+- Secrets are passed at runtime through `.env` or `docker run --env-file`; they are not baked into the image.
+- The mounted `data/` directory keeps the local Qdrant store available across container runs.
+- If you do not pass API keys, the app stays usable in demo mode with deterministic fallback behavior.
+
 ## Ingestion Workflow
 
 Use the manual ingestion workflow to prepare and load CVE data into the live Qdrant collection.
@@ -120,7 +146,7 @@ If you want to test the app manually after the suite passes:
 
 ## Current Status
 
-Sprint 06 is complete.
+Sprint 07 is complete.
 
 Completed so far:
 
@@ -130,10 +156,11 @@ Completed so far:
 - Sprint 04: Streamlit dashboard, runtime wiring, and UI test coverage
 - Sprint 05: verification hardening, safer failure handling, and documentation cleanup
 - Sprint 06: external sample data ingestion and preprocessing
+- Sprint 07: Docker image and local container run
 
 Current focus:
 
-- Prepare Docker packaging and container-run support in Sprint 07
+- Prepare for future distribution and environment packaging work
 - Expand the live-data workflow beyond the curated offline subset
 - Keep the project presentation-ready while feature work continues
 
