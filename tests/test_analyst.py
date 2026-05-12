@@ -4,7 +4,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.analyst import GroqChatClient, SAFE_NO_MATCH_VERDICT, SAFE_TIMEOUT_VERDICT, analyze_log, generate_verdict, parse_log
+from src.analyst import (
+    MAX_ANALYSIS_INPUT_CHARS,
+    MAX_GROQ_PROMPT_CHARS,
+    GroqChatClient,
+    SAFE_NO_MATCH_VERDICT,
+    SAFE_TIMEOUT_VERDICT,
+    RetrievedCVE,
+    analyze_log,
+    generate_verdict,
+    parse_log,
+)
 
 
 @dataclass(frozen=True)
@@ -174,6 +184,63 @@ def test_analyze_log_raises_clear_error_when_embedder_returns_no_vector() -> Non
         assert "returned no vector" in str(error)
     else:  # pragma: no cover - defensive assertion
         raise AssertionError("Expected a RuntimeError when the embedder returns no vectors")
+
+
+def test_analyze_log_truncates_large_input_before_embedding() -> None:
+    qdrant_client = FakeQdrantClient(
+        [
+            FakeScoredPoint(
+                payload={
+                    "cve_id": "CVE-2025-0100",
+                    "description": "SSH brute force authentication weakness.",
+                    "cvss_score": 9.8,
+                },
+                score=0.91,
+            )
+        ]
+    )
+    seen_lengths: list[int] = []
+
+    def tracking_embedder(texts: list[str]) -> list[list[float]]:
+        seen_lengths.append(len(texts[0]))
+        return _fake_embedder(texts)
+
+    report = analyze_log(
+        "A" * 20000,
+        qdrant_client,
+        tracking_embedder,
+        FakeGroqClient("Analyst Verdict: High Risk. SSH brute force pattern matched the retrieved CVE."),
+    )
+
+    assert report.verdict.startswith("Analyst Verdict: High Risk")
+    assert seen_lengths and seen_lengths[0] <= MAX_ANALYSIS_INPUT_CHARS
+
+
+def test_generate_verdict_truncates_large_prompt_before_groq_call() -> None:
+    parsed = parse_log("May 12 10:11:12 host sshd[1234]: Failed password for root from 10.0.0.5 port 22 ssh2")
+    parsed = parsed.__class__(
+        raw_text="B" * 20000,
+        timestamp=parsed.timestamp,
+        ip_address=parsed.ip_address,
+        service=parsed.service,
+        message=parsed.message,
+    )
+    captured: dict[str, str] = {}
+
+    class RecordingGroqClient:
+        def generate(self, system_prompt: str, user_prompt: str) -> str:
+            captured["prompt"] = user_prompt
+            return "Analyst Verdict: High Risk. Retrieved SSH context supports the finding."
+
+    verdict = generate_verdict(
+        parsed,
+        [RetrievedCVE(cve_id="CVE-2025-0100", description="SSH brute force authentication weakness.", cvss_score=9.8, score=0.91)],
+        groq_client=RecordingGroqClient(),
+    )
+
+    assert verdict.startswith("Analyst Verdict: High Risk")
+    assert len(captured["prompt"]) <= MAX_GROQ_PROMPT_CHARS
+    assert "[truncated]" in captured["prompt"]
 
 
 def test_groq_chat_client_uses_supported_default_model(monkeypatch) -> None:

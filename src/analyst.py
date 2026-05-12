@@ -21,6 +21,10 @@ SYSTEM_PROMPT = (
     "You are a Senior SOC Analyst. Use only the provided context to analyze the log. "
     "If no match is found, state that no known vulnerability was identified."
 )
+MAX_ANALYSIS_INPUT_CHARS = 1600
+MAX_PROMPT_LOG_CHARS = 1200
+MAX_PROMPT_CVE_CHARS = 240
+MAX_GROQ_PROMPT_CHARS = 5000
 SAFE_NO_MATCH_VERDICT = "Analyst Verdict: No known vulnerability was identified."
 SAFE_TIMEOUT_VERDICT = (
     "Analyst Verdict: Analysis could not be completed because the model request timed out. "
@@ -122,7 +126,8 @@ def retrieve_similar_cves(
     """Retrieve the top matching CVEs for a log entry."""
 
     logger.info("Querying Qdrant...")
-    embedded_logs = list(embedder([log_text]))
+    search_text = _truncate_text(log_text, MAX_ANALYSIS_INPUT_CHARS)
+    embedded_logs = list(embedder([search_text]))
     if not embedded_logs or not embedded_logs[0]:
         raise RuntimeError("Embedding client returned no vector for the submitted log.")
 
@@ -159,7 +164,7 @@ def build_prompt(parsed_log: ParsedLog, retrieved_cves: Sequence[RetrievedCVE]) 
     """Build the user prompt for the analyst model."""
 
     context_lines = [
-        f"Log: {parsed_log.raw_text}",
+        f"Log: {_truncate_text(parsed_log.raw_text, MAX_PROMPT_LOG_CHARS)}",
         f"Parsed service: {parsed_log.service or 'unknown'}",
         f"Parsed timestamp: {parsed_log.timestamp or 'unknown'}",
         f"Parsed IP: {parsed_log.ip_address or 'unknown'}",
@@ -169,12 +174,12 @@ def build_prompt(parsed_log: ParsedLog, retrieved_cves: Sequence[RetrievedCVE]) 
     if retrieved_cves:
         for index, cve in enumerate(retrieved_cves, start=1):
             context_lines.append(
-                f"{index}. {cve.cve_id} | CVSS {cve.cvss_score:.1f} | similarity {cve.score:.3f} | {cve.description}"
+                f"{index}. {cve.cve_id} | CVSS {cve.cvss_score:.1f} | similarity {cve.score:.3f} | {_truncate_text(cve.description, MAX_PROMPT_CVE_CHARS)}"
             )
     else:
         context_lines.append("No known vulnerability matched the log.")
 
-    return "\n".join(context_lines)
+    return _truncate_text("\n".join(context_lines), MAX_GROQ_PROMPT_CHARS)
 
 
 def generate_verdict(
@@ -251,6 +256,7 @@ class GroqChatClient:
         import requests
 
         try:
+            trimmed_prompt = _truncate_text(user_prompt, MAX_GROQ_PROMPT_CHARS)
             response = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
                 headers={
@@ -261,7 +267,7 @@ class GroqChatClient:
                     "model": self.model,
                     "messages": [
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
+                        {"role": "user", "content": trimmed_prompt},
                     ],
                     "temperature": 0,
                 },
@@ -306,3 +312,11 @@ def _extract_message(text: str) -> str:
     if ": " in text:
         return text.split(": ", 1)[1]
     return text
+
+
+def _truncate_text(text: str, limit: int) -> str:
+    if len(text) <= limit:
+        return text
+
+    suffix = " ... [truncated]"
+    return text[: max(0, limit - len(suffix))].rstrip() + suffix
