@@ -6,8 +6,11 @@ functions so the operator flow can be verified without starting a browser.
 
 from __future__ import annotations
 
+import csv
+import json
 from contextlib import contextmanager
 from dataclasses import dataclass
+from io import StringIO
 import logging
 from pathlib import Path
 import sys
@@ -74,8 +77,109 @@ def resolve_log_input(pasted_log: str, uploaded_file: Any | None) -> str:
         raw_bytes = uploaded_file
 
     if isinstance(raw_bytes, bytes):
-        return raw_bytes.decode("utf-8", errors="replace").strip()
-    return str(raw_bytes).strip()
+        raw_text = raw_bytes.decode("utf-8", errors="replace")
+    else:
+        raw_text = str(raw_bytes)
+
+    filename = str(getattr(uploaded_file, "name", "")).lower()
+    return normalize_uploaded_log_text(raw_text, filename=filename)
+
+
+def normalize_uploaded_log_text(raw_text: str, *, filename: str = "") -> str:
+    """Convert uploaded CSV or JSON exports into a single log string."""
+
+    stripped_text = raw_text.strip()
+    if not stripped_text:
+        return ""
+
+    if filename.endswith(".json"):
+        normalized = _extract_log_text_from_json(stripped_text)
+        if normalized:
+            return normalized
+
+    if filename.endswith(".csv") or _looks_like_csv(stripped_text):
+        normalized = _extract_log_text_from_csv(stripped_text)
+        if normalized:
+            return normalized
+
+    return stripped_text
+
+
+def _looks_like_csv(text: str) -> bool:
+    lines = text.splitlines()
+    return len(lines) > 1 and "," in lines[0]
+
+
+def _extract_log_text_from_csv(text: str) -> str:
+    reader = csv.DictReader(StringIO(text))
+    rows = list(reader)
+    if not rows:
+        return ""
+
+    return _select_text_from_records(rows)
+
+
+def _extract_log_text_from_json(text: str) -> str:
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return ""
+
+    if isinstance(payload, list):
+        records = [item for item in payload if isinstance(item, dict)]
+        if records:
+            return _select_text_from_records(records)
+        return "\n".join(str(item).strip() for item in payload if str(item).strip())
+
+    if isinstance(payload, dict):
+        for value in payload.values():
+            if isinstance(value, list) and value and all(isinstance(item, dict) for item in value):
+                return _select_text_from_records(value)
+        return _select_text_from_record(payload)
+
+    return ""
+
+
+def _select_text_from_records(records: Sequence[dict[str, Any]]) -> str:
+    lines = [_select_text_from_record(record) for record in records]
+    lines = [line for line in lines if line]
+    return "\n".join(lines)
+
+
+def _select_text_from_record(record: dict[str, Any]) -> str:
+    candidate_keys = (
+        "timestamp",
+        "time",
+        "service",
+        "host",
+        "ip",
+        "src_ip",
+        "dst_ip",
+        "username",
+        "user",
+        "log",
+        "message",
+        "msg",
+        "entry",
+        "event",
+        "raw",
+        "text",
+        "line",
+        "details",
+        "ssh_log",
+    )
+
+    structured_parts: list[str] = []
+    for key in candidate_keys:
+        value = record.get(key)
+        if isinstance(value, str) and value.strip():
+            structured_parts.append(f"{key}={value.strip()}")
+
+    if structured_parts:
+        return " | ".join(structured_parts)
+
+    values = [str(value).strip() for value in record.values() if str(value).strip()]
+    return " | ".join(values)
 
 
 def build_demo_cve_records() -> list[CVERecord]:
@@ -151,7 +255,7 @@ class HuggingFaceEmbedder:
     def __call__(self, texts: Sequence[str]) -> list[list[float]]:
         from huggingface_hub import InferenceClient
 
-        client = InferenceClient(provider="hf-inference", api_key=self.api_token)
+        client = InferenceClient(api_key=self.api_token)
         vectors: list[list[float]] = []
         for text in texts:
             try:

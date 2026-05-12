@@ -62,6 +62,7 @@ Runtime behavior:
 - The repo now includes curated offline sample assets in `data/samples/` for predictable local preprocessing and test runs.
 - Without `HF_TOKEN`, the UI falls back to a demo collection for local operator-flow testing.
 - If `GROQ_API_KEY` is missing, the app can still run in demo mode, but it will not use the live Groq verdict path.
+- CSV or JSON log exports can be uploaded directly; the dashboard normalizes structured records into analyst-ready log text.
 
 ## Docker
 

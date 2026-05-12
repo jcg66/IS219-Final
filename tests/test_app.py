@@ -28,6 +28,7 @@ from src.app import (
 @dataclass(frozen=True)
 class FakeUploadedFile:
     content: bytes
+    name: str = "log.txt"
 
     def getvalue(self) -> bytes:
         return self.content
@@ -116,6 +117,21 @@ def test_resolve_log_input_reads_uploaded_file_when_no_paste() -> None:
     assert "Failed password" in result
 
 
+def test_resolve_log_input_normalizes_csv_log_rows() -> None:
+    csv_text = (
+        "timestamp,service,message\n"
+        "2026-05-12T10:11:12Z,sshd,Failed password for root from 10.0.0.5 port 22 ssh2\n"
+    )
+
+    result = resolve_log_input(
+        "",
+        FakeUploadedFile(csv_text.encode("utf-8"), name="ssh-illegal-login-attempts.csv"),
+    )
+
+    assert "Failed password" in result
+    assert "sshd" in result
+
+
 def test_normalize_embedding_payload_averages_token_vectors() -> None:
     payload = [[1.0, 3.0, 5.0], [3.0, 5.0, 7.0]]
 
@@ -135,8 +151,7 @@ def test_huggingface_embedder_uses_inference_client(monkeypatch) -> None:
     from src.app import HuggingFaceEmbedder
 
     class FakeInferenceClient:
-        def __init__(self, provider: str, api_key: str) -> None:
-            assert provider == "hf-inference"
+        def __init__(self, api_key: str) -> None:
             assert api_key == "hf-test-token"
 
         def feature_extraction(self, text: str, *, model: str):
