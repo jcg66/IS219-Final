@@ -16,8 +16,9 @@ class AppSettings:
     """Container for runtime configuration values."""
 
     groq_api_key: str | None
-    hf_token: str | None
-    nvd_api_key: str | None
+    hf_token: str | None = None
+    nvd_api_key: str | None = None
+    groq_model: str | None = None
     qdrant_path: str = "data/qdrant_db"
 
 
@@ -26,6 +27,7 @@ def load_settings() -> AppSettings:
 
     return AppSettings(
         groq_api_key=os.getenv("GROQ_API_KEY") or None,
+        groq_model=os.getenv("GROQ_MODEL") or None,
         hf_token=os.getenv("HF_TOKEN") or None,
         nvd_api_key=os.getenv("NVD_API_KEY") or None,
     )

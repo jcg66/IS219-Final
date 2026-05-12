@@ -132,6 +132,18 @@ def test_resolve_log_input_normalizes_csv_log_rows() -> None:
     assert "sshd" in result
 
 
+def test_resolve_log_input_normalizes_json_log_rows() -> None:
+    json_text = (
+        "[{\"timestamp\": \"2026-05-12T10:11:12Z\", \"service\": \"sshd\", "
+        "\"message\": \"Failed password for root from 10.0.0.5 port 22 ssh2\"}]"
+    )
+
+    result = resolve_log_input("", FakeUploadedFile(json_text.encode("utf-8"), name="ssh-illegal-login-attempts.json"))
+
+    assert "Failed password" in result
+    assert "service=sshd" in result
+
+
 def test_normalize_embedding_payload_averages_token_vectors() -> None:
     payload = [[1.0, 3.0, 5.0], [3.0, 5.0, 7.0]]
 

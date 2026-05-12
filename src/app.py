@@ -308,7 +308,7 @@ def create_groq_client(settings: AppSettings | None = None) -> Any:
 
     settings = settings or load_settings()
     if settings.groq_api_key:
-        return GroqChatClient(api_key=settings.groq_api_key)
+        return GroqChatClient(api_key=settings.groq_api_key, model=settings.groq_model or GroqChatClient.DEFAULT_MODEL)
     return DemoGroqClient()
 
 

@@ -238,7 +238,9 @@ def analyze_log(
 class GroqChatClient:
     """Minimal Groq chat client used by the analyst pipeline."""
 
-    def __init__(self, api_key: str | None, model: str = "llama3-8b-8192") -> None:
+    DEFAULT_MODEL = "llama-3.1-8b-instant"
+
+    def __init__(self, api_key: str | None, model: str = DEFAULT_MODEL) -> None:
         self.api_key = api_key
         self.model = model
 

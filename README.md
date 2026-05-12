@@ -39,6 +39,7 @@ Example `.env`:
 
 ```env
 GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=llama-3.1-8b-instant
 HF_TOKEN=your_huggingface_token_here
 NVD_API_KEY=your_nvd_api_key_here
 ```
@@ -46,6 +47,7 @@ NVD_API_KEY=your_nvd_api_key_here
 API key notes:
 
 - `GROQ_API_KEY` is used for the final analyst verdict generation.
+- `GROQ_MODEL` can override the default Groq model if your account is configured for a different production model.
 - `HF_TOKEN` enables live Hugging Face embeddings. Without it, the dashboard falls back to demo mode.
 - `NVD_API_KEY` is reserved for NVD-backed ingestion work and should still be kept in `.env` for local development.
 - Do not commit `.env`; keep real secrets only in your local root `.env` file.

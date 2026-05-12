@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.analyst import SAFE_NO_MATCH_VERDICT, SAFE_TIMEOUT_VERDICT, analyze_log, generate_verdict, parse_log
+from src.analyst import GroqChatClient, SAFE_NO_MATCH_VERDICT, SAFE_TIMEOUT_VERDICT, analyze_log, generate_verdict, parse_log
 
 
 @dataclass(frozen=True)
@@ -36,6 +36,17 @@ class FakeGroqClient:
 class TimeoutGroqClient:
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         raise TimeoutError("timed out")
+
+
+class FakeResponse:
+    def __init__(self, payload: dict[str, object]) -> None:
+        self.payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> dict[str, object]:
+        return self.payload
 
 
 def _fake_embedder(texts: list[str]) -> list[list[float]]:
@@ -163,3 +174,23 @@ def test_analyze_log_raises_clear_error_when_embedder_returns_no_vector() -> Non
         assert "returned no vector" in str(error)
     else:  # pragma: no cover - defensive assertion
         raise AssertionError("Expected a RuntimeError when the embedder returns no vectors")
+
+
+def test_groq_chat_client_uses_supported_default_model(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_post(url: str, **kwargs):
+        captured["url"] = url
+        captured["json"] = kwargs["json"]
+        return FakeResponse({"choices": [{"message": {"content": "Analyst Verdict: No known vulnerability was identified."}}]})
+
+    monkeypatch.setattr("requests.post", fake_post)
+
+    client = GroqChatClient(api_key="groq-test-key")
+    verdict = client.generate("system prompt", "user prompt")
+
+    assert verdict == "Analyst Verdict: No known vulnerability was identified."
+    assert captured["url"] == "https://api.groq.com/openai/v1/chat/completions"
+    assert captured["json"]["model"] == GroqChatClient.DEFAULT_MODEL
+    assert captured["json"]["messages"][0]["role"] == "system"
+    assert captured["json"]["messages"][1]["role"] == "user"
