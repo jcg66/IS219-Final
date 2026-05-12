@@ -17,3 +17,6 @@ env/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.pytest_tmp/
+pytest-of-*/
+qa_qdrant_demo/

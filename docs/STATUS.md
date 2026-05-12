@@ -3,8 +3,8 @@
 ## Current Snapshot
 
 Project: Semantic SOC Analyst
-Status: Sprint 03 completed
-Sprint: Sprint 03 complete
+Status: Sprint 04 completed
+Sprint: Sprint 04 complete
 
 ## Technical Direction
 
@@ -54,20 +54,25 @@ This approach keeps the heavy model work off the local machine while preserving 
 
 ## Current Sprint
 
-Sprint 03 has been completed.
+Sprint 04 has been completed.
 
-Planned sprint focus:
-
-- Move to Sprint 04: Streamlit dashboard and operator flow
-- Validate the analyst verdict flow in future feature work
-- Keep the current foundation, ingestion, and analyst files stable
-
-Planned sprint sequence:
+Completed sprint sequence:
 
 - Sprint 01: Foundation and environment setup
 - Sprint 02: CVE ingestion and Qdrant storage
 - Sprint 03: Log parsing and analyst pipeline
 - Sprint 04: Streamlit dashboard and operator flow
+
+Sprint 04 completion notes:
+
+- Streamlit now supports pasted logs and uploaded log files through a single operator flow
+- The dashboard surfaces parsed log details, retrieved CVE evidence, and the final analyst verdict
+- Runtime setup loads the root `.env` before building backend clients and separates live mode from demo mode
+- Operator-visible status messaging and clean backend error handling are in place
+- UI tests cover submission flow, missing input, render behavior, and clean failure paths
+
+Next sprint sequence:
+
 - Sprint 05: Testing hardening and release polish
 - Sprint 06: External data ingestion and preprocessing
 
@@ -83,3 +88,4 @@ Planned sprint sequence:
 - Retrieval returns relevant CVE context for security logs
 - The analyst response stays grounded in the retrieved evidence
 - Tests cover parsing, integration behavior, and benign-log handling
+- The Streamlit dashboard supports the manual operator workflow and passes the current QA suite

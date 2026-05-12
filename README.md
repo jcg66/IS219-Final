@@ -28,7 +28,22 @@ This approach keeps the application practical for a student laptop while still d
 
 ## Current Status
 
-Planning phase only. See [docs/STATUS.md](docs/STATUS.md) for the roadmap and sprint tracker.
+Sprint 04 is complete.
+
+Completed so far:
+
+- Sprint 01: repository foundation, environment scaffolding, and dependency setup
+- Sprint 02: CVE ingestion helpers and local Qdrant storage flow
+- Sprint 03: log parsing, retrieval, and grounded analyst pipeline
+- Sprint 04: Streamlit dashboard, runtime wiring, and UI test coverage
+
+Current focus:
+
+- Harden verification and release polish in Sprint 05
+- Expand testing around runtime integrations and edge cases
+- Prepare the project for the external-data follow-up sprint
+
+See [docs/STATUS.md](docs/STATUS.md) for the roadmap and sprint tracker.
 
 ## Planned Structure
 
